@@ -1,0 +1,844 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>人像图库</title>
+
+    <!-- Custom fonts for this template-->
+    <link href="../static/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+            href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+            rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="../static/css/sb-admin-2.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{% static "images/school.jpg" %}">
+
+    <style>
+
+        .imageContainer {
+            display: flex;
+            justify-content: center; /* 将图片框水平居中 */
+            margin-right: 100px; /* 设置图片框之间的距离 */
+            margin-left: 100px; /* 设置分隔组件与左边框的距离 */
+        }
+
+        #imagePreview, #rightImagePreview {
+            width: 600px; /* 设置图片框的宽度 */
+            height: 600px; /* 设置图片框的高度 */
+            border: 1px solid #ccc; /* 添加边框 */
+            padding: 5px; /* 添加内边距 */
+            box-sizing: border-box; /* 盒模型为边框盒 */
+            overflow: hidden; /* 如果图片太大，隐藏溢出部分 */
+            background-color: rgba(240, 240, 240, 0.4); /* 设置背景颜色为透明浅灰色 */
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2); /* 设置阴影 */
+        }
+        #separator {
+            width: 50px; /* 设置分隔组件的宽度 */
+            height: 100%; /* 设置分隔组件的高度 */
+            background-color: rgba(0, 0, 0, 0.1); /* 设置透明的背景色 */
+        }
+        #imagePreview img, #rightImagePreview img {
+            width: 100%; /* 图片宽度填充父元素 */
+            height: 100%; /* 图片高度填充父元素 */
+            object-fit: contain; /* 图片填充整个框并保持比例 */
+        }
+
+        #uploadImage {
+            justify-content: center;
+            margin-top: 10px; /* 设置上传图片按钮与上方组件的距离 */
+            margin-bottom: 2px; /* 设置上传图片按钮与下方组件的距离 */
+            padding-left: 42%; /* 设置文字与组件左边的距离 */
+            font-size: 20px; /* 设置字体大小 */
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px; /* 设置按钮组的上边距 */
+        }
+
+        /* 设置按钮之间的间距 */
+        .button-row button {
+            margin: 0 250px; /* 设置按钮的左右边距 */
+        }
+
+        .btn-light {
+            border: 1px solid #000000; /* 设置边框为2像素宽度的实线，颜色为灰色 */
+            font-size: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            justify-content: center;
+            width: 95%;
+            margin-left: 2.5%; /* 添加左侧间距，与菜单栏宽度相匹配 */
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+            font-size: 20px;
+            min-width: 260px;
+            height: 260px; /* 设置单元格高度 */
+        }
+
+        img {
+            max-width: 250px;
+            max-height: 250px;
+        }
+
+        #addPerson {
+            margin-top: 15px;
+            margin-left: 45%;
+        }
+        #findPerson {
+            margin-top: 15px;
+            margin-left: 45%;
+            margin-bottom: 15px;
+        }
+
+        .modal {
+            display: flex;
+            align-items: center; /* 垂直居中 */
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.2); /* 添加半透明黑色背景 */
+        }
+        .modal-dialog {
+            width: 400px;
+            max-width: 80%; /* 设置最大宽度 */
+            height: 380px;
+            max-height: 80%; /* 设置最大高度 */
+            background-color: #fff; /* 添加白色背景 */
+            border-radius: 5px; /* 添加圆角 */
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2); /* 添加阴影 */
+        }
+        .modal-content {
+            width: 100%; /* 使模态框内容宽度与模态框相同 */
+            height: 100%; /* 使模态框内容高度与模态框相同 */
+        }
+
+        .modal-dialog1 {
+            margin: 30px auto auto;
+            width: 400px;
+            max-width: 80%; /* 设置最大宽度 */
+            height: 210px;
+            max-height: 80%; /* 设置最大高度 */
+            background-color: #fff; /* 添加白色背景 */
+            border-radius: 5px; /* 添加圆角 */
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.2); /* 添加阴影 */
+        }
+
+    </style>
+
+</head>
+
+<body id="page-top">
+
+<!-- Page Wrapper -->
+<div id="wrapper">
+
+    <!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-neepu sidebar sidebar-dark accordion" id="accordionSidebar">
+
+        <!-- Sidebar - Brand -->
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" style="width: fit-content !important;font-size: 1.1rem" href="/home">
+            <div class="sidebar-brand-icon rotate-n-15">
+                <i class="fas fa-hard-hat"></i>
+            </div>
+            <div class="sidebar-brand-text mx-3" style="width: 150px">安全视界监管平台</div>
+        </a >
+
+        <!-- Divider -->
+        <hr class="sidebar-divider my-0">
+
+        <!-- Nav Item - Dashboard -->
+        <li class="nav-item ">
+            <form action="{% url 'face' %}" method="post" name="face">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-calendar-check" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke;"  onclick="clockIn()">
+                        <span style="font-size: 25px;">出勤打卡</span></button>
+
+                </a>
+            </form>
+        </li>
+
+        <!-- Divider -->
+
+
+        <li class="nav-item ">
+            <form action="{% url 'detectd' %}" method="post" name="detectd">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class='fas fa-video' style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke" onclick="clockIn()"><span style="font-size: 25px;">现场检测</span></button>
+
+                </a>
+            </form>
+        </li>
+
+
+        <li class="nav-item ">
+            <form action="{% url 'result_list' %}" method="post" name="result_list">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-eye" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">检测结果</span></button>
+                </a>
+            </form>
+        </li>
+
+
+        <li class="nav-item ">
+            <form action="{% url 'chart_view' %}" method="post" name="chart_view">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-download" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">导出图表</span></button>
+
+                </a>
+            </form>
+        </li>
+
+
+        <li class="nav-item ">
+            <form action="{% url 'grade_list' %}" method="post" name="grade_list">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-star" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">考核评分</span></button>
+
+                </a>
+            </form>
+        </li>
+
+
+        <li class="nav-item ">
+            <form action="{% url 'image_list' %}" method="post" name="image_list">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-users" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">人像图库</span></button>
+
+                </a>
+            </form>
+        </li>
+
+
+
+        <li class="nav-item ">
+            <form action="{% url 'history' %}" method="post" name="history">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-plug" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">设备日志</span></button>
+
+                </a>
+            </form>
+        </li>
+
+
+        {#        <li class="nav-item ">#}
+        {#            <form action="{% url 'video_list' %}" method="post" name="video_list">#}
+        {#                {% csrf_token %}#}
+        {#                <a class="nav-link">#}
+        {#                    <i class="fa fa-fw fa-play"></i>#}
+        {##}
+        {#                    <button style="border: none; background: none; color: whitesmoke"><span>视频回放</span></button>#}
+        {##}
+        {#                </a>#}
+        {#            </form>#}
+        {#        </li>#}
+
+
+        <li class="nav-item ">
+            <form action="{% url 'test' %}" method="post" name="test">
+                {% csrf_token %}
+                <a class="nav-link">
+                    <i class="fas fa-fw fa-cog" style="font-size: 25px;"></i>
+
+                    <button style="border: none; background: none; color: whitesmoke"><span style="font-size: 25px;">识别校验</span></button>
+
+                </a>
+            </form>
+        </li>
+
+        <!-- Divider -->
+        <hr class="sidebar-divider d-none d-md-block">
+
+        <!-- Sidebar Toggler (Sidebar) -->
+        <div class="text-center d-none d-md-inline">
+            <button class="rounded-circle border-0" id="sidebarToggle"></button>
+        </div>
+
+
+    </ul>
+    <!-- End of Sidebar -->
+
+    <!-- Content Wrapper -->
+    <div id="content-wrapper" class="d-flex flex-column">
+
+        <!-- Main Content -->
+        <div id="content">
+
+
+            <!-- End of Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                <label style="position: absolute; left: 50px; top: 22px">安全视界监管平台------人像图库</label>
+                <div id="current-date-time" style="position: absolute; right: 50px">
+
+                    <span id="date"></span>
+                    <span style="margin: 0 15px;"></span>
+                    <span id="time"></span>
+                    <span style="margin: 0 15px;"></span>
+                    <span id="day"></span>
+                </div>
+            </nav>
+
+            <!-- Begin Page Content -->
+            <div class="container-fluid">
+
+                <!-- Page Heading -->
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">人像图库</h1>
+
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+                            筛选
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right "
+                             aria-labelledby="navbarDropdown">
+                            {% for item in dropdown_items %}
+                                <form action="{% url 'person_result' %}" method="post" name="person_result">
+                                    {% csrf_token %}
+                                    <!-- 将值作为表单参数传递 -->
+                                    <a class="dropdown-item" href="#">
+                                        <button type="submit" style="font-size:18px; border: none; background: none; color: inherit;" name="class_name" value="{{ item.name }}" href="#">{{ item.name }}</button></a>
+                                </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Row -->
+
+                <!-- 这里将显示图片列表 -->
+
+
+            </div>
+            <!-- /.container-fluid -->
+
+            <script>
+                function getItemName(name) {
+                    fetch(`/image_list/?name=${name}`, { method: 'GET' })
+                        .then(response => response.text())
+                        .then(html => {
+                            // 将收到的 HTML 内容添加到当前页面中的特定元素中
+                            document.getElementById('image-list-container').innerHTML = html;
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                }
+            </script>
+            <div id="image-list-container">
+                <table>
+                    <tr>
+                        {% for file, person_id in data %}
+                            <td>
+                                <img src="{% static 'pic/' %}{{ file.file }}" alt="Image">
+                                <br>
+                                <span>{{ file.name }}</span>
+                            </td>
+                            {% if forloop.counter|divisibleby:5 %}
+                                </tr><tr>
+                            {% endif %}
+                        {% endfor %}
+                        </tr>
+                </table>
+            </div>
+
+            <button id="addPerson" class="btn btn-light">录入人员</button>
+            <button id="findPerson" class="btn btn-light">查找人员</button>
+
+
+            <div id="myModal" class="modal" tabindex="-1" style="display: none;">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form id="AddStudent" action="{% url 'changeperson' %}" method="post" name="changeperson" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h5 class="modal-title">人员信息</h5>
+                                <button type="button" class="close" onclick="closeModal()">&times;</button>
+                            </div>
+                            <div class="modal-body" style="text-align: center;">
+                                <input type="text" id="studentNumber" name="ID" class="form-control" style="margin-bottom: 10px" placeholder="请输入学生的学号">
+                                <input type="text" id="studentName" name="Sname" class="form-control" style="margin-bottom: 10px" placeholder="请输入学生的姓名">
+                                <input type="text" id="studentGender" name="gender" class="form-control" style="margin-bottom: 10px" placeholder="请输入学生的性别">
+                                <input type="text" id="studentClass" name="class" class="form-control" style="margin-bottom: 10px" placeholder="请输入学生的班级">
+                                <input type="file" id="studentPhoto" accept="image/*" style="display: block; margin: 0 auto;">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">录入</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeModal()">关闭</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const updateForm = document.getElementById('AddStudent');
+                    updateForm.addEventListener('submit', function (event) {
+                        const studentNumber = document.getElementById('studentNumber');
+                        const studentName = document.getElementById('studentName');
+                        const studentGender = document.getElementById('studentGender');
+                        const studentClass = document.getElementById('studentClass');
+                        const studentPhoto = document.getElementById('studentPhoto');
+                        var flag = true;
+                        if (studentNumber.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请输入学生的学号');
+                            flag = false;
+                        }else if(studentName.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请输入学生的名字');
+                            flag = false;
+                        }else if(studentGender.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请输入学生的性别');
+                            flag = false;
+                        }else if(studentClass.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请输入学生的班级');
+                            flag = false;
+                        }
+                        else if(studentPhoto.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请上传学生的照片');
+                            flag = false;
+                        }
+                        if(flag){
+                            alert('录入成功');
+                        }
+                    });
+                });
+            </script>
+
+
+            <div id="myModal1" class="modal" tabindex="-1" style="display: none;">
+                <div class="modal-dialog1">
+                    <div class="modal-content">
+                        <form id="FindStudent" action="{% url 'findperson' %}" method="post" name="findperson" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h5 class="modal-title">查找人员</h5>
+                                <button type="button" class="close" onclick="closeModal1()">&times;</button>
+                            </div>
+                            <div class="modal-body" style="text-align: center;">
+                                <input type="text" id="studentNumber1" name="ID" class="form-control" style="margin-bottom: 10px" placeholder="请输入学生的学号">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">查找</button>
+                                <button type="button" class="btn btn-secondary" onclick="closeModal1()">关闭</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const updateForm = document.getElementById('FindStudent');
+                    updateForm.addEventListener('submit', function (event) {
+                        const studentNumber = document.getElementById('studentNumber1');
+                        if (studentNumber.value.trim() === '') {
+                            event.preventDefault(); // 阻止表单提交
+                            alert('请输入学生的学号');
+                        }
+                    });
+                });
+            </script>
+
+
+        </div>
+        <!-- End of Main Content -->
+
+        <!-- Footer -->
+        <footer class="sticky-footer bg-white">
+            <div class="container my-auto">
+                <div class="copyright text-center my-auto">
+                    <span>Copyright &copy; NEEPU 2024</span>
+                </div>
+            </div>
+        </footer>
+        <!-- End of Footer -->
+
+    </div>
+    <!-- End of Content Wrapper -->
+
+</div>
+<!-- End of Page Wrapper -->
+
+<!-- Scroll to Top Button-->
+<a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+</a>
+
+
+<!-- Bootstrap core JavaScript-->
+<script src="../static/vendor/jquery/jquery.min.js"></script>
+<script src="../static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<!-- Core plugin JavaScript-->
+<script src="../static/vendor/jquery-easing/jquery.easing.min.js"></script>
+
+<!-- Custom scripts for all pages-->
+<script src="../static/js/sb-admin-2.min.js"></script>
+
+<!-- Page level plugins -->
+<script src="../static/vendor/chart.js/Chart.min.js"></script>
+
+<!-- Page level custom scripts -->
+<script src="../static/js/demo/chart-area-demo.js"></script>
+<script src="../static/js/demo/chart-pie-demo.js"></script>
+
+
+<script>
+    function getRandomColor() {
+        let r = Math.floor(Math.random() * 256) ;
+        let g = Math.floor(Math.random() * 256) ;
+        let b = Math.floor(Math.random() * 256) ;
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function getDarkerColor(color) {
+        let rgb = color.slice(4, -1).split(', ').map(Number);
+        let darkerRgb = rgb.map(value => Math.max(0, value - 25));
+        return `rgb(${darkerRgb.join(', ')})`;
+    }
+
+    function getFunds() {
+        let email = localStorage.getItem('user_email');
+        return fetch(`http://localhost:8080/selectByEmail/${email}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            });
+    }
+
+    function updatePieChart(byAssets = false) {
+        getFunds().then(funds => {
+            // 使用 reduce 方法将相同 fundId 的股票合并在一起
+            let groupedFunds = funds.reduce((acc, fund) => {
+                let existingFund = acc.find(f => f.fundId === fund.fundId);
+                if (existingFund) {
+                    existingFund.shares += fund.shares;
+                    existingFund.purchasePrice = (existingFund.purchasePrice + fund.purchasePrice) / 2;
+                } else {
+                    acc.push(fund);
+                }
+                return acc;
+            }, []);
+
+            let labels = groupedFunds.map(fund => fund.fundId);
+            let data;
+            try {
+                data = byAssets ? groupedFunds.map(fund => fund.shares * fund.purchasePrice) : groupedFunds.map(fund => fund.shares);
+            } catch (error) {
+                console.error("Error calculating data: ", error);
+                return;
+            }
+            let backgroundColor = groupedFunds.map(() => getRandomColor());
+            let hoverBackgroundColor = backgroundColor.map(getDarkerColor);
+            if (window.myPieChart) {
+                window.myPieChart.data.labels = labels;
+                window.myPieChart.data.datasets[0].data = data;
+                window.myPieChart.data.datasets[0].backgroundColor = backgroundColor;
+                window.myPieChart.data.datasets[0].hoverBackgroundColor = hoverBackgroundColor;
+                window.myPieChart.update();
+            }
+
+            // 创建标签
+            let legendContainer = document.querySelector('.mt-4.text-center.small');
+            legendContainer.innerHTML = '';  // 清空现有的标签
+            for (let i = 0; i < labels.length; i++) {
+                let legendItem = document.createElement('span');
+                legendItem.className = 'mr-2';
+                legendItem.innerHTML = `
+            <i class="fas fa-circle" style="color: ${backgroundColor[i]}"></i> ${labels[i]}
+        `;
+                legendContainer.appendChild(legendItem);
+            }
+        }).catch(error => {
+            console.error("Error getting funds: ", error);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 在页面加载完成时，更新饼图
+        updatePieChart();
+
+        // 添加事件监听器
+        document.getElementById('switchToShares').addEventListener('click', function() {
+            updatePieChart(false);
+        });
+        document.getElementById('switchToAssets').addEventListener('click', function() {
+            updatePieChart(true);
+        });
+    });
+</script>
+
+<script>
+    function getFundPercent(fundId) {
+        const baseUrl = "https://stock.xueqiu.com/v5/stock/realtime/quotec.json";
+        let timestamp = new Date().getTime();
+        const url = `${baseUrl}?symbol=${fundId}&_=${timestamp}`;
+        return fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.data && data.data.length > 0) {
+                    return data.data[0].percent;
+                } else {
+                    throw new Error(`No data for fund ${fundId}`);
+                }
+            });
+    }
+
+    function getAllFunds() {
+        return fetch('http://localhost:8080/allFunds')
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    return data;
+                } else {
+                    throw new Error(`No funds data`);
+                }
+            });
+    }
+
+    function updateTopFunds() {
+        getAllFunds().then(funds => {
+            let percentPromises = funds.map(fund => getFundPercent(fund.symbol).then(percent => ({...fund, percent})));
+            Promise.all(percentPromises).then(funds => {
+                let topFunds = funds.sort((a, b) => b.percent - a.percent).slice(0, 5);
+                let html = topFunds.map(fund => {
+                    // 根据涨幅的正负来设置进度条的颜色
+                    let progressBarClass = fund.percent >= 0 ? 'bg-success' : 'bg-danger';
+                    return `
+                    <h4 class="small font-weight-bold">${fund.symbol} <span class="float-right">${fund.percent}%</span></h4>
+                    <div class="progress mb-4">
+                        <div class="progress-bar ${progressBarClass}" role="progressbar" style="width: ${Math.abs(fund.percent)}%"
+                            aria-valuenow="${Math.abs(fund.percent)}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                `;
+                }).join('');
+                document.getElementById('topFunds').innerHTML = html;
+            });
+        }).catch(error => {
+            console.error("Error getting funds: ", error);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateTopFunds();
+    });
+</script>
+
+<script>
+    window.onload = function() {
+        // 页面加载完成后调用 showAnswer 方法
+        showAnswer();
+    };
+
+    function previewImage(event) {
+        var reader = new FileReader();
+        reader.onload = function() {
+            var image = new Image();
+            image.src = reader.result;
+            image.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var width = image.width;
+                var height = image.height;
+                var maxWidth = 600; // 指定图片框的宽度
+                var maxHeight = 600; // 指定图片框的高度
+
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / maxWidth > height / maxHeight) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    } else {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(image, 0, 0, width, height);
+                var imageDataURL = canvas.toDataURL('image/jpeg'); // 转换成 JPEG 格式
+                var imagePreview = document.getElementById('imagePreview');
+                var rightImagePreview = document.getElementById('rightImagePreview');
+                imagePreview.innerHTML = '<img src="' + imageDataURL + '">';
+
+                saveImageLocally(imageDataURL);
+            }
+
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    function displayImageOnRightPanel(imagePath) {
+        var rightImagePreview = document.getElementById('rightImagePreview');
+        rightImagePreview.innerHTML = '<img src={% static "exp/uploaded_image.jpg" %}>';
+    }
+
+    function displayImageOnLeftPanel(imagePath) {
+        var leftImagePreview = document.getElementById('imagePreview');
+        leftImagePreview.innerHTML = '<img src={% static "downloads/uploaded_image.jpg" %}>';
+    }
+
+    function showAnswer() {
+        displayImageOnLeftPanel('./data/images/过气偶像vs后宫王.jpg');
+        displayImageOnRightPanel('./data/images/过气偶像vs后宫王.jpg');
+    }
+</script>
+
+{# 下载视频 #}
+<script>
+    function previewImage(event) {
+        var reader = new FileReader();
+        reader.onload = function() {
+            var image = new Image();
+            image.src = reader.result;
+            image.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                var width = image.width;
+                var height = image.height;
+                var maxWidth = 600; // 指定图片框的宽度
+                var maxHeight = 600; // 指定图片框的高度
+
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / maxWidth > height / maxHeight) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    } else {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(image, 0, 0, width, height);
+                var imageDataURL = canvas.toDataURL('image/jpeg'); // 转换成 JPEG 格式
+                var imagePreview = document.getElementById('imagePreview');
+                var rightImagePreview = document.getElementById('rightImagePreview');
+                imagePreview.innerHTML = '<img src="' + imageDataURL + '">';
+
+                saveImageLocally(imageDataURL);
+            }
+
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+
+    function saveImageLocally(imageDataURL) {
+        // 创建一个新的a标签
+        const link = document.createElement('a');
+        link.href = imageDataURL; // 设置a标签的链接为图片的DataURL
+        link.download = 'uploaded_image.jpg'; // 设置下载属性为文件名
+        document.body.appendChild(link); // 将a标签添加到页面中
+        link.click(); // 模拟点击a标签进行下载
+        document.body.removeChild(link); // 下载完成后移除a标签
+
+        // 删除同名文件，确保覆盖
+        const sameNameFilePath = 'C:\\Users\\lenovo\\Downloads\\uploaded_image.jpg';
+        fetch(sameNameFilePath, { method: 'DELETE' }); // 发起删除请求，假设服务器支持DELETE方法
+    }
+</script>
+
+<script>
+    // 更新日期、时间和星期显示
+    function updateClock() {
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = now.getMonth() + 1;
+        var day = now.getDate();
+        var hours = now.getHours();
+        var minutes = now.getMinutes();
+        var seconds = now.getSeconds();
+        var dayOfWeek = now.toLocaleDateString('zh-CN', { weekday: 'long' });
+
+        // 格式化时间和日期
+        month = (month < 10 ? "0" : "") + month;
+        day = (day < 10 ? "0" : "") + day;
+        hours = (hours < 10 ? "0" : "") + hours;
+        minutes = (minutes < 10 ? "0" : "") + minutes;
+        seconds = (seconds < 10 ? "0" : "") + seconds;
+
+        // 更新显示
+        document.getElementById('date').textContent = year + "-" + month + "-" + day;
+        document.getElementById('time').textContent = hours + ":" + minutes + ":" + seconds;
+        document.getElementById('day').textContent = dayOfWeek;
+    }
+
+    // 初次加载页面时更新时间
+    updateClock();
+
+    // 每秒更新一次时间
+    setInterval(updateClock, 1000);
+</script>
+
+<script>
+    // 提示信息
+    function clockIn() {
+        alert("正在连接外部设备，请稍等片刻，若长时间无响应请刷新网页");
+    }
+
+    document.getElementById('addPerson').addEventListener('click', function() {
+        document.getElementById('myModal').style.display = 'block';
+    });
+
+    function closeModal() {
+        document.getElementById('myModal').style.display = 'none';
+    }
+
+    document.getElementById('findPerson').addEventListener('click', function() {
+        document.getElementById('myModal1').style.display = 'block';
+    });
+
+    function closeModal1() {
+        document.getElementById('myModal1').style.display = 'none';
+    }
+</script>
+
+</body>
+
+</html>
